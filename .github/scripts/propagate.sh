@@ -19,26 +19,32 @@ git fetch upstream
 
 git checkout "$CLIENT_BRANCH"
 
-if git merge upstream/main \
-     --allow-unrelated-histories \
-     --no-edit \
-     -m "chore: sync from core"; then
-  git push origin "$CLIENT_BRANCH"
-  echo "Success: $CLIENT_REPO updated"
+# Merge dene
+git merge upstream/main \
+  --allow-unrelated-histories \
+  --no-commit \
+  --no-ff || true
+
+# .github conflict'ini her zaman "sil" lehine çöz
+# Müşteri reposunda .github/ olmamalı
+git rm -rf .github/ 2>/dev/null || true
+git checkout HEAD -- .github/ 2>/dev/null || true
+
+# Kalan conflict'leri core lehine çöz
+if git diff --name-only --diff-filter=U | grep -q .; then
+  git diff --name-only --diff-filter=U | while read file; do
+    git checkout --theirs "$file" 2>/dev/null || git rm "$file"
+  done
+fi
+
+# Commit et
+git add -A
+
+if git diff --cached --quiet; then
+  echo "Nothing to commit, already up to date"
   exit 0
 fi
 
-git merge --abort
-
-if git merge upstream/main \
-     --allow-unrelated-histories \
-     --strategy-option=theirs \
-     --no-edit \
-     -m "chore: sync from core auto-resolved"; then
-  git push origin "$CLIENT_BRANCH"
-  echo "Success: $CLIENT_REPO updated with auto-resolve"
-  exit 0
-fi
-
-echo "Failed: manual intervention needed"
-exit 1
+git commit -m "chore: sync from core"
+git push origin "$CLIENT_BRANCH"
+echo "Success: $CLIENT_REPO updated"
