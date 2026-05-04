@@ -56,10 +56,10 @@ jobs:
           .github/scripts/propagate.sh \
             "${{ matrix.client.repo }}" \
             "${{ matrix.client.branch }}" \
-            "yourcompany/core-repo" \
+            "emrekaradag12/core" \
             "${{ secrets.PROPAGATION_TOKEN }}" \
             "Core Bot" \
-            "bot@yourcompany.com"
+            "bot@kiralarsin.com"
 
   # Tüm clientlar bittikten sonra özet
   summary:
