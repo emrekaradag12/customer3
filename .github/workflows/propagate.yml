@@ -1,44 +1,24 @@
-# .github/workflows/propagate.yml
-
 name: Propagate to Clients
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    outputs:
-      is_core: ${{ steps.check.outputs.is_core }}
-    steps:
-      - id: check
-        run: |
-          if [ "${{ github.repository }}" = "emrekaradag12/core" ]; then
-            echo "is_core=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_core=false" >> $GITHUB_OUTPUT
-          fi
-
   prepare:
-    needs: check
-    if: needs.check.outputs.is_core == 'true'   # ← sadece core'da çalış
     runs-on: ubuntu-latest
+    if: github.repository == 'emrekaradag12/core'
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PROPAGATION_TOKEN }}
 
-      - name: Load client list
-        id: set-matrix
+      - id: set-matrix
         run: |
-          if [ -n "${{ github.event.inputs.client }}" ]; then
-            # Sadece belirli bir client
-            matrix=$(echo '[{"repo":"${{ github.event.inputs.client }}","branch":"main"}]' | jq -c '.')
-          else
-            # Tüm clientlar
-            matrix=$(cat .github/clients.json | jq -c '.')
-          fi
+          matrix=$(cat .github/clients.json | jq -c '.')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   propagate:
@@ -47,7 +27,7 @@ jobs:
     strategy:
       matrix:
         client: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      fail-fast: false  # Biri patlarsa diğerleri durmasın
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
@@ -64,19 +44,4 @@ jobs:
             "${{ matrix.client.repo }}" \
             "${{ matrix.client.branch }}" \
             "emrekaradag12/core" \
-            "${{ secrets.PROPAGATION_TOKEN }}" \
-            "Core Bot" \
-            "bot@kiralarsin.com"
-
-  # Tüm clientlar bittikten sonra özet
-  summary:
-    needs: propagate
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Print summary
-        run: |
-          echo "## Propagation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "Status: ${{ needs.propagate.result }}" >> $GITHUB_STEP_SUMMARY
+            "${{ secrets.PROPAGATION_TOKEN }}"
