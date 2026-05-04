@@ -21,7 +21,7 @@ git clone "https://x-access-token:${TOKEN}@github.com/${CLIENT_REPO}.git" client
 cd client-repo
 
 # Core'u upstream olarak ekle
-git remote add upstream "https://github.com/${CORE_REPO}.git"
+git remote add upstream "https://x-access-token:${TOKEN}@github.com/${CORE_REPO}.git"
 git fetch upstream
 
 # Merge dene
