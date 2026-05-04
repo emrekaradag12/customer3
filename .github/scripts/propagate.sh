@@ -23,7 +23,7 @@ git fetch upstream
 
 git checkout "$CLIENT_BRANCH"
 
-if git merge upstream/main --no-edit -m "chore: sync from core $(date +'%Y-%m-%d %H:%M')"; then
+if git merge upstream/main --allow-unrelated-histories --no-edit -m "chore: sync from core $(date +'%Y-%m-%d %H:%M')"; then
   git push origin "$CLIENT_BRANCH"
   echo "✅ $CLIENT_REPO successfully updated"
 else
