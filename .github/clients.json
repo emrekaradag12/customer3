@@ -1,0 +1,4 @@
+[
+    { "repo": "git@github.com:emrekaradag12/customer1.git", "branch": "main" },
+    { "repo": "git@github.com:emrekaradag12/customer2.git", "branch": "main" }
+]

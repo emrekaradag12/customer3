@@ -1,0 +1,75 @@
+# core-repo/.github/workflows/propagate.yml
+
+name: Propagate to Clients
+
+on:
+  push:
+    branches: [main]
+
+  # Elle de tetikleyebilirsin
+  workflow_dispatch:
+    inputs:
+      client:
+        description: 'Belirli bir client (boş bırakırsan hepsi)'
+        required: false
+
+jobs:
+  # clients.json'u okuyup matrix oluştur
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load client list
+        id: set-matrix
+        run: |
+          if [ -n "${{ github.event.inputs.client }}" ]; then
+            # Sadece belirli bir client
+            matrix=$(echo '[{"repo":"${{ github.event.inputs.client }}","branch":"main"}]' | jq -c '.')
+          else
+            # Tüm clientlar
+            matrix=$(cat .github/clients.json | jq -c '.')
+          fi
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+  propagate:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        client: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false  # Biri patlarsa diğerleri durmasın
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PROPAGATION_TOKEN }}
+
+      - name: Run propagation script
+        env:
+          GH_TOKEN: ${{ secrets.PROPAGATION_TOKEN }}
+        run: |
+          chmod +x .github/scripts/propagate.sh
+          .github/scripts/propagate.sh \
+            "${{ matrix.client.repo }}" \
+            "${{ matrix.client.branch }}" \
+            "yourcompany/core-repo" \
+            "${{ secrets.PROPAGATION_TOKEN }}" \
+            "Core Bot" \
+            "bot@yourcompany.com"
+
+  # Tüm clientlar bittikten sonra özet
+  summary:
+    needs: propagate
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print summary
+        run: |
+          echo "## Propagation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.propagate.result }}" >> $GITHUB_STEP_SUMMARY
