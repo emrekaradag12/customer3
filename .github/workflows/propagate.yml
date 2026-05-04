@@ -1,4 +1,4 @@
-# core-repo/.github/workflows/propagate.yml
+# .github/workflows/propagate.yml
 
 name: Propagate to Clients
 
@@ -6,16 +6,23 @@ on:
   push:
     branches: [main]
 
-  # Elle de tetikleyebilirsin
-  workflow_dispatch:
-    inputs:
-      client:
-        description: 'Belirli bir client (boş bırakırsan hepsi)'
-        required: false
-
 jobs:
-  # clients.json'u okuyup matrix oluştur
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      is_core: ${{ steps.check.outputs.is_core }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.repository }}" = "emrekaradag12/core" ]; then
+            echo "is_core=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_core=false" >> $GITHUB_OUTPUT
+          fi
+
   prepare:
+    needs: check
+    if: needs.check.outputs.is_core == 'true'   # ← sadece core'da çalış
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
